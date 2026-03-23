@@ -1,0 +1,173 @@
+#!/bin/bash
+# Generate comprehensive TCC permission report
+# Usage: ./generate-tcc-report.sh [output_file]
+
+set -e
+
+OUTPUT_FILE="${1:-tcc-report-$(date +%Y%m%d-%H%M%S).md}"
+
+echo "Generating TCC Report..."
+echo "Output: $OUTPUT_FILE"
+
+# Start report
+cat > "$OUTPUT_FILE" << 'EOF'
+# macOS TCC Permission Report
+
+Generated: TIMESTAMP
+
+## Summary
+
+EOF
+
+# Replace timestamp
+sed -i "s/TIMESTAMP/$(date)/" "$OUTPUT_FILE"
+
+# User database stats
+USER_DB="$HOME/Library/Application Support/com.apple.TCC/TCC.db"
+if [[ -f "$USER_DB" ]]; then
+  cat >> "$OUTPUT_FILE" << EOF
+### User TCC Database
+
+**Path:** $USER_DB
+**Total entries:** $(sqlite3 "$USER_DB" "SELECT COUNT(*) FROM access;")
+**Approved:** $(sqlite3 "$USER_DB" "SELECT COUNT(*) FROM access WHERE auth_value=2;")
+**Denied:** $(sqlite3 "$USER_DB" "SELECT COUNT(*) FROM access WHERE auth_value=0;")
+**Unknown:** $(sqlite3 "$USER_DB" "SELECT COUNT(*) FROM access WHERE auth_value=1;")
+
+#### High-Value Permissions
+
+EOF
+
+  # Check for high-value permissions
+  HIGH_VALUE_SERVICES=(
+    "kTCCServiceSystemPolicyAllFiles"
+    "kTCCServiceEndpointSecurityClient"
+    "kTCCServiceAppleEvents"
+    "kTCCServiceAccessibility"
+    "kTCCServicePostEvent"
+  )
+
+  for service in "${HIGH_VALUE_SERVICES[@]}"; do
+    COUNT=$(sqlite3 "$USER_DB" "SELECT COUNT(*) FROM access WHERE service='$service' AND auth_value=2;")
+    if [[ "$COUNT" -gt 0 ]]; then
+      echo "- **$service**: $COUNT apps" >> "$OUTPUT_FILE"
+      sqlite3 "$USER_DB" "SELECT client FROM access WHERE service='$service' AND auth_value=2;" | while read client; do
+        echo "  - $client" >> "$OUTPUT_FILE"
+      done
+    fi
+  done
+fi
+
+# System database stats
+SYSTEM_DB="/Library/Application Support/com.apple.TCC/TCC.db"
+if [[ -f "$SYSTEM_DB" ]]; then
+  cat >> "$OUTPUT_FILE" << EOF
+
+### System TCC Database
+
+**Path:** $SYSTEM_DB
+EOF
+  
+  if sudo -n true 2>/dev/null; then
+    echo "**Total entries:** $(sudo sqlite3 "$SYSTEM_DB" "SELECT COUNT(*) FROM access;")" >> "$OUTPUT_FILE"
+    echo "**Approved:** $(sudo sqlite3 "$SYSTEM_DB" "SELECT COUNT(*) FROM access WHERE auth_value=2;")" >> "$OUTPUT_FILE"
+  else
+    echo "**Note:** Requires sudo to query" >> "$OUTPUT_FILE"
+  fi
+fi
+
+# Full Disk Access apps
+cat >> "$OUTPUT_FILE" << EOF
+
+## Full Disk Access (FDA)
+
+### User Database
+
+EOF
+
+if [[ -f "$USER_DB" ]]; then
+  sqlite3 -header -column "$USER_DB" \
+    "SELECT client, auth_reason FROM access WHERE service='kTCCServiceSystemPolicyAllFiles' AND auth_value=2;" >> "$OUTPUT_FILE" 2>/dev/null || echo "(none)" >> "$OUTPUT_FILE"
+fi
+
+cat >> "$OUTPUT_FILE" << EOF
+
+### System Database
+
+EOF
+
+if [[ -f "$SYSTEM_DB" ]]; then
+  sudo sqlite3 -header -column "$SYSTEM_DB" \
+    "SELECT client, auth_reason FROM access WHERE service='kTCCServiceSystemPolicyAllFiles' AND auth_value=2;" >> "$OUTPUT_FILE" 2>/dev/null || echo "(requires sudo)" >> "$OUTPUT_FILE"
+fi
+
+# Automation permissions
+cat >> "$OUTPUT_FILE" << EOF
+
+## Automation Permissions (Apple Events)
+
+### User Database
+
+EOF
+
+if [[ -f "$USER_DB" ]]; then
+  sqlite3 -header -column "$USER_DB" \
+    "SELECT client, auth_reason FROM access WHERE service='kTCCServiceAppleEvents' AND auth_value=2;" >> "$OUTPUT_FILE" 2>/dev/null || echo "(none)" >> "$OUTPUT_FILE"
+fi
+
+# Accessibility permissions
+cat >> "$OUTPUT_FILE" << EOF
+
+## Accessibility Permissions
+
+### User Database
+
+EOF
+
+if [[ -f "$USER_DB" ]]; then
+  sqlite3 -header -column "$USER_DB" \
+    "SELECT client, auth_reason FROM access WHERE service='kTCCServiceAccessibility' AND auth_value=2;" >> "$OUTPUT_FILE" 2>/dev/null || echo "(none)" >> "$OUTPUT_FILE"
+fi
+
+# Privilege escalation analysis
+cat >> "$OUTPUT_FILE" << EOF
+
+## Privilege Escalation Analysis
+
+### Potential Vectors
+
+EOF
+
+# Check for Finder automation
+if [[ -f "$USER_DB" ]]; then
+  if sqlite3 "$USER_DB" "SELECT 1 FROM access WHERE client LIKE '%Finder%' AND service='kTCCServiceAppleEvents' AND auth_value=2;" 2>/dev/null | grep -q 1; then
+    echo "- ⚠️ **Finder Automation**: Can copy TCC databases via AppleScript" >> "$OUTPUT_FILE"
+  fi
+  
+  if sqlite3 "$USER_DB" "SELECT 1 FROM access WHERE service='kTCCServiceEndpointSecurityClient' AND auth_value=2;" 2>/dev/null | grep -q 1; then
+    echo "- ⚠️ **Endpoint Security Client**: Grants Full Disk Access" >> "$OUTPUT_FILE"
+  fi
+  
+  if sqlite3 "$USER_DB" "SELECT 1 FROM access WHERE service='kTCCServicePostEvent' AND auth_value=2;" 2>/dev/null | grep -q 1; then
+    if sqlite3 "$USER_DB" "SELECT 1 FROM access WHERE service='kTCCServiceAccessibility' AND auth_value=2;" 2>/dev/null | grep -q 1; then
+      echo "- ⚠️ **PostEvent + Accessibility**: Can send keystrokes to processes" >> "$OUTPUT_FILE"
+    fi
+  fi
+fi
+
+cat >> "$OUTPUT_FILE" << EOF
+
+### Recommendations
+
+1. Review all Full Disk Access permissions
+2. Audit automation permissions for sensitive apps
+3. Check for unnecessary accessibility permissions
+4. Monitor TCC database changes
+5. Consider using MDM for enterprise environments
+
+---
+
+*Report generated by macOS TCC Analyzer*
+EOF
+
+echo "Report generated: $OUTPUT_FILE"

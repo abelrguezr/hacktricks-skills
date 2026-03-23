@@ -1,0 +1,40 @@
+# High-Value Target Paths for SeManageVolumePrivilege Abuse
+# Use these paths when reading raw volume data to locate sensitive files
+
+## Machine Private Keys (AD CS Golden Certificate)
+%ProgramData%\Microsoft\Crypto\RSA\MachineKeys\
+%ProgramData%\Microsoft\Crypto\Keys\
+
+## Local Account Secrets
+C:\Windows\System32\config\SAM
+C:\Windows\System32\config\SYSTEM
+C:\Windows\System32\config\SECURITY
+C:\Windows\System32\config\SOFTWARE
+C:\Windows\System32\config\DEFAULT
+
+## Domain Controller (via VSS Shadow Copy)
+C:\Windows\NTDS\ntds.dit
+
+## CA Certificates and CRLs
+C:\Windows\System32\CertSrv\CertEnroll\
+C:\Windows\System32\CertSrv\pki\
+
+## DPAPI Master Keys
+C:\Users\<username>\AppData\Roaming\Microsoft\Protect\
+
+## Service Account Credentials
+C:\Windows\System32\config\NetSetup.log
+C:\Windows\System32\config\Eventlog\Application\Application.evtx
+
+## Scheduled Task Credentials
+C:\Windows\System32\Tasks\
+
+## LSA Secrets
+C:\Windows\System32\config\SYSTEM\CurrentControlSet\Control\Lsa\
+
+## Notes
+- Use NTFS-aware tools (RawCopy, FTK Imager) to extract files from raw volume data
+- VSS shadow copies provide easier access to protected files
+- MachineKeys files are named with GUIDs and contain RSA private keys
+- SAM hive requires SYSTEM hive boot keys to decrypt hashes
+- ntds.dit requires SYSTEM hive to decrypt domain password hashes

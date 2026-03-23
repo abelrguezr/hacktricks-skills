@@ -1,0 +1,23 @@
+{
+  "skill_name": "golden-gmsa-dmsa-attack",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "I have compromised a Domain Controller in the example.local forest and need to extract the KDS root key. What's the best approach and what commands should I run?",
+      "expected_output": "Instructions for KDS root key extraction using mimikatz, GoldenDMSA, or GoldenGMSA with specific commands",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "I found a gMSA account called 'svc_backup' in Active Directory but the msDS-ManagedPasswordId attribute is empty. How do I discover the ManagedPasswordID?",
+      "expected_output": "Explanation of wordlist generation based on account creation time and the GoldendMSA.exe wordlist command",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "I have the KDS root key (GUID: 12345678-1234-1234-1234-123456789012, base64: ABC123...), the SID (S-1-5-21-123456789-123456789-123456789-1001), and the ManagedPasswordID (87654321-4321-4321-4321-210987654321). How do I compute the gMSA password?",
+      "expected_output": "Specific compute command with all three parameters and explanation of output format",
+      "files": []
+    }
+  ]
+}

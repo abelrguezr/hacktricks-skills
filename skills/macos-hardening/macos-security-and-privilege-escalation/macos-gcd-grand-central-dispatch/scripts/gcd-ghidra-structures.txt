@@ -1,0 +1,53 @@
+# Ghidra Structure Definitions for GCD Analysis
+# Copy these into Ghidra's Data Type Manager
+
+# Block structure (Objective-C)
+struct Block {
+   void *isa;           // NSConcreteStackBlock, NSConcreteMallocBlock, NSConcreteGlobalBlock
+   int flags;           // Block flags (BLOCK_HAS_COPY_DISPOSE, BLOCK_HAS_SIGNATURE, etc.)
+   int reserved;
+   void *invoke;        // Function pointer to call
+   struct BlockDescriptor *descriptor;
+   // captured variables go here (variable length)
+};
+
+# Block descriptor structure
+struct BlockDescriptor {
+   int reserved;
+   int size;            // Size of the block descriptor
+   void *copy_helper;   // Copy helper function (if BLOCK_HAS_COPY_DISPOSE)
+   void *dispose_helper; // Dispose helper function (if BLOCK_HAS_COPY_DISPOSE)
+   void *signature;     // Objective-C signature (if BLOCK_HAS_SIGNATURE)
+};
+
+# Swift dispatch block structure
+struct swift_dispatch_block {
+   void *isa;
+   int flags;
+   int reserved;
+   void *invoke;
+   struct swift_block_descriptor *descriptor;
+   // captured variables
+};
+
+struct swift_block_descriptor {
+   int reserved;
+   int size;
+   void *copy_helper;
+   void *dispose_helper;
+};
+
+# Block flags (for reference)
+# BLOCK_HAS_COPY_DISPOSE = 0x0001
+# BLOCK_HAS_CTOR = 0x0002
+# BLOCK_IS_GLOBAL = 0x0004
+# BLOCK_HAS_SIGNATURE = 0x0008
+# BLOCK_HAS_STRET = 0x0010
+# BLOCK_IS_LEAK = 0x0020
+
+# Usage in Ghidra:
+# 1. Open Data Type Manager (Window > Data Type Manager)
+# 2. Create new structure for each type above
+# 3. Add fields with appropriate types
+# 4. Find variables in code and retype them using these structures
+# 5. Right-click variable > Retype Variable > Select your structure

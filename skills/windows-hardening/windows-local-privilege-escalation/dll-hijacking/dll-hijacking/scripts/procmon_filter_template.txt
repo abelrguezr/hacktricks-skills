@@ -1,0 +1,35 @@
+ProcMon Filter Configuration for DLL Hijacking Discovery
+=========================================================
+
+To find missing DLLs that can be hijacked:
+
+1. Open ProcMon (Sysinternals)
+2. Click Filter -> Filter (or Ctrl+L)
+3. Add these filter rules:
+
+Rule 1: Target Process
+  Process Name | is | <target_executable.exe>
+  (e.g., "Narrator.exe", "TPQMAssistant.exe")
+
+Rule 2: DLL Files Only
+  Path | ends with | .dll
+
+Rule 3: Missing Files
+  Result | is | NAME NOT FOUND
+
+4. Click "Add" after each rule, then "OK"
+5. Start capturing (Ctrl+E or magnifying glass icon)
+6. Run the target application
+7. Stop capturing and review results
+
+Alternative: Find ALL missing DLLs (no process filter)
+-------------------------------------------------------
+  Path | ends with | .dll
+  Result | is | NAME NOT FOUND
+  Operation | is | CreateFile
+
+Tips:
+- Use "Process Name" "contains" for partial matches
+- Filter by "Operation" = "Load Image" to see successful loads
+- Export results to CSV for analysis (File -> Save)
+- Look for patterns: same DLL missing across multiple processes
