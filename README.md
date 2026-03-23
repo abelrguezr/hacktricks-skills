@@ -1,4 +1,4 @@
-# Red Team Skills Corpus
+# Red Team Agent Skills
 
 A collection of **reusable red teaming agent skills** derived from [HackTricks](https://hacktricks.wiki/en/index.html) and organized in Anthropic-compatible format. Each skill encapsulates attack techniques, enumeration methods, exploitation workflows, and defensive evasion tactics for security research and authorized penetration testing. Skills were generated from the source tutorials using Qwen3.5-27B-FP8.
 
